@@ -31,6 +31,7 @@ type GameStore = {
   setPlayer: (player: Player | null) => void;
   typingStatus: Record<string, string>;
   setTypingStatus: (playerId: string, status: string) => void;
+  clearTypingStatus: () => void;
 };
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -44,4 +45,5 @@ export const useGameStore = create<GameStore>((set) => ({
   setTypingStatus: (playerId, status) => set((state) => ({
     typingStatus: { ...state.typingStatus, [playerId]: status }
   })),
+  clearTypingStatus: () => set({ typingStatus: {} }),
 }));

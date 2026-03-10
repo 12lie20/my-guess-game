@@ -13,6 +13,38 @@ const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
 
+function normalizeArabic(text: string): string {
+  if (!text) return '';
+  let normalized = text.toLowerCase().trim();
+  // Remove diacritics (tashkeel)
+  normalized = normalized.replace(/[\u064B-\u065F]/g, '');
+  // Normalize Alif
+  normalized = normalized.replace(/[أإآ]/g, 'ا');
+  // Normalize Teh Marbuta to Heh
+  normalized = normalized.replace(/ة/g, 'ه');
+  // Normalize Yaa to Alif Maksura
+  normalized = normalized.replace(/ى/g, 'ي');
+  // Remove "ال" from the beginning of words
+  normalized = normalized.replace(/(^|\s)ال/g, '$1');
+  // Remove extra spaces
+  normalized = normalized.replace(/\s+/g, ' ').trim();
+  return normalized;
+}
+
+function isMatch(answer1: string, answer2: string): boolean {
+  const norm1 = normalizeArabic(answer1);
+  const norm2 = normalizeArabic(answer2);
+  
+  if (norm1 === norm2) return true;
+  
+  // If one contains the other and it's a significant word
+  if (norm1.length > 2 && norm2.length > 2) {
+    if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
+  }
+  
+  return false;
+}
+
 // Rate Limiter for Socket.io
 const rateLimits = new Map<string, { count: number, resetTime: number }>();
 const RATE_LIMIT_MAX = 20; // max events
@@ -305,10 +337,10 @@ app.prepare().then(() => {
       room.state = 'SCORE';
       
       // Calculate scores
-      const subjectAnswerLower = room.subjectAnswer?.toLowerCase().trim();
+      const subjectAnswer = room.subjectAnswer || '';
       room.players.forEach(p => {
         if (p.id !== room.subjectId && p.prediction) {
-          if (p.prediction.toLowerCase().trim() === subjectAnswerLower) {
+          if (isMatch(p.prediction, subjectAnswer)) {
             p.score += 100;
           }
         }

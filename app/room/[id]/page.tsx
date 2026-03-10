@@ -6,6 +6,28 @@ import { useGameStore } from '@/store/gameStore';
 import { motion, AnimatePresence } from 'motion/react';
 import { Copy, Users, Play, CheckCircle2, Loader2, Trophy, ArrowRight } from 'lucide-react';
 
+function normalizeArabic(text: string): string {
+  if (!text) return '';
+  let normalized = text.toLowerCase().trim();
+  normalized = normalized.replace(/[\u064B-\u065F]/g, '');
+  normalized = normalized.replace(/[أإآ]/g, 'ا');
+  normalized = normalized.replace(/ة/g, 'ه');
+  normalized = normalized.replace(/ى/g, 'ي');
+  normalized = normalized.replace(/(^|\s)ال/g, '$1');
+  normalized = normalized.replace(/\s+/g, ' ').trim();
+  return normalized;
+}
+
+function isMatch(answer1: string, answer2: string): boolean {
+  const norm1 = normalizeArabic(answer1);
+  const norm2 = normalizeArabic(answer2);
+  if (norm1 === norm2) return true;
+  if (norm1.length > 2 && norm2.length > 2) {
+    if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
+  }
+  return false;
+}
+
 export default function RoomPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -23,7 +45,10 @@ export default function RoomPage() {
 
     socket.on('room_update', (updatedRoom: any) => {
       setRoom(updatedRoom);
-      if (updatedRoom.state === 'QUESTION' || updatedRoom.state === 'PREDICTION') {
+      if (updatedRoom.state === 'QUESTION') {
+        setAnswer('');
+        useGameStore.getState().clearTypingStatus();
+      } else if (updatedRoom.state === 'PREDICTION') {
         setAnswer('');
       }
     });
@@ -235,7 +260,7 @@ export default function RoomPage() {
                       </div>
                     ) : (
                       <>
-                        {player.prediction ? (
+                        {player.prediction || typingStatus[player.id] === 'Submitted' ? (
                           <div className="p-6 bg-cyan-500/10 border border-cyan-500/30 rounded-xl">
                             <CheckCircle2 className="w-12 h-12 text-cyan-400 mx-auto mb-3" />
                             <h3 className="text-xl font-bold text-cyan-300 mb-2">تم اعتماد توقعك!</h3>
@@ -274,7 +299,7 @@ export default function RoomPage() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-bold truncate">{p.name}</div>
                       <div className="text-xs text-purple-300 truncate">
-                        {p.prediction ? (
+                        {p.prediction || typingStatus[p.id] === 'Submitted' ? (
                           <span className="text-green-400 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> جاهز</span>
                         ) : (
                           <span className="text-amber-400/80 italic">{typingStatus[p.id] === 'typing' ? 'يكتب...' : 'يفكر...'}</span>
@@ -320,7 +345,7 @@ export default function RoomPage() {
 
                 <div className="grid sm:grid-cols-2 gap-4 mb-10">
                   {room.players.filter(p => p.id !== room.subjectId).map((p, idx) => {
-                    const isCorrect = room.state === 'SCORE' && p.prediction?.toLowerCase().trim() === room.subjectAnswer?.toLowerCase().trim();
+                    const isCorrect = room.state === 'SCORE' && isMatch(p.prediction || '', room.subjectAnswer || '');
                     return (
                       <motion.div 
                         key={p.id}
