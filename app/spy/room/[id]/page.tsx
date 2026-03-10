@@ -69,6 +69,8 @@ export default function SpyRoomPage() {
   const isSpy = room.spyId === player.id;
   const myVote = player.votedFor;
 
+  const answeredCount = room.players.filter(p => p.prediction).length;
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 text-white p-4 md:p-8 font-sans overflow-hidden relative">
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-600/20 rounded-full blur-[120px] pointer-events-none" />
@@ -150,11 +152,11 @@ export default function SpyRoomPage() {
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="bg-purple-500/20 text-purple-300 w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5">2</span>
-                    الجاسوس ي answering على سؤال مختلف.
+                    الجاسوس له سؤال مختلف عنكم.
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="bg-amber-500/20 text-amber-300 w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5">3</span>
-                   guess مين الجاسوس من خلال الإجابات.
+                    تخمنون مين الجاسوس من الإجابات.
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="bg-green-500/20 text-green-300 w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5">4</span>
@@ -225,9 +227,25 @@ export default function SpyRoomPage() {
                 )}
               </div>
 
+              {/* Progress indicator */}
+              <div className="mb-6">
+                <div className="flex justify-between text-sm text-purple-300 mb-2">
+                  <span>الإجابات ({answeredCount}/{room.players.length})</span>
+                </div>
+                <div className="h-2 bg-black/30 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-gradient-to-r from-cyan-500 to-purple-500"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(answeredCount / room.players.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {room.players.map(p => (
-                  <div key={p.id} className="bg-black/20 rounded-xl p-3 border border-white/5 flex items-center gap-3">
+                  <div key={p.id} className={`bg-black/20 rounded-xl p-3 border border-white/5 flex items-center gap-3 ${
+                    p.prediction ? 'bg-green-500/10 border-green-500/30' : ''
+                  }`}>
                     <span className="text-2xl">{p.avatar}</span>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-bold truncate">{p.name}</div>
@@ -290,22 +308,43 @@ export default function SpyRoomPage() {
                 )}
               </div>
 
+              {/* Voting progress */}
+              <div className="mb-6">
+                <div className="flex justify-between text-sm text-purple-300 mb-2">
+                  <span>التصويت ({room.players.filter(p => p.votedFor).length}/{room.players.length})</span>
+                </div>
+                <div className="h-2 bg-black/30 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-gradient-to-r from-cyan-500 to-purple-500"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(room.players.filter(p => p.votedFor).length / room.players.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {room.players.map(p => (
-                  <div key={p.id} className="bg-black/20 rounded-xl p-3 border border-white/5 flex items-center gap-3">
-                    <span className="text-2xl">{p.avatar}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold truncate">{p.name}</div>
-                      <div className="text-xs text-purple-300">
-                        {p.votedFor ? (
-                          <span className="text-cyan-400">صوت ✅</span>
-                        ) : (
-                          <span className="text-amber-400/80">يصوت...</span>
-                        )}
+                {room.players.map(p => {
+                  const votedForPlayer = p.votedFor ? room.players.find(player => player.id === p.votedFor) : null;
+                  return (
+                    <div key={p.id} className={`bg-black/20 rounded-xl p-3 border border-white/5 flex items-center gap-3 ${
+                      p.votedFor ? 'bg-cyan-500/10 border-cyan-500/30' : ''
+                    }`}>
+                      <span className="text-2xl">{p.avatar}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold truncate">{p.name}</div>
+                        <div className="text-xs">
+                          {p.votedFor ? (
+                            <span className="text-cyan-400 flex items-center gap-1">
+                              صوت على <span className="font-bold">{votedForPlayer?.avatar} {votedForPlayer?.name}</span>
+                            </span>
+                          ) : (
+                            <span className="text-amber-400/80">يصوت...</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </motion.div>
           )}
@@ -349,7 +388,7 @@ export default function SpyRoomPage() {
                         <span className="text-2xl">{p.avatar}</span>
                         <span className="font-bold">{p.name}</span>
                         {p.id === room.spyId && <span className="text-amber-400 text-sm">(الجاسوس)</span>}
-                        {p.votedFor === room.spyId && <span className="text-green-400 text-sm">صوت عليه ✓</span>}
+                        {room.votes && p.votedFor === room.spyId && <span className="text-green-400 text-sm">صوت عليه ✓</span>}
                       </div>
                       <div className="mt-2 text-purple-200 italic">"{p.prediction}"</div>
                     </div>
