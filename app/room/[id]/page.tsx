@@ -153,7 +153,7 @@ export default function RoomPage() {
                 <ul className="text-right space-y-4 text-purple-300/80">
                   <li className="flex items-start gap-3">
                     <span className="bg-fuchsia-500/20 text-fuchsia-300 w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5">1</span>
-                    نختار واحد منكم يكون هو "الضحية".
+                    نختار واحد منكم يكون هو &quot;الضحية&quot;.
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="bg-cyan-500/20 text-cyan-300 w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5">2</span>
@@ -299,55 +299,89 @@ export default function RoomPage() {
                 <h2 className="text-2xl font-bold text-center text-purple-200 mb-8">{room.currentQuestion}</h2>
                 
                 <div className="flex flex-col items-center mb-12">
-                  <div className="text-6xl mb-4 drop-shadow-2xl">{subjectPlayer?.avatar}</div>
-                  <div className="text-sm text-fuchsia-300 uppercase tracking-wider font-bold mb-2">جواب {subjectPlayer?.name}</div>
-                  <div className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-cyan-400 text-center">
-                    "{room.subjectAnswer}"
-                  </div>
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', damping: 12 }}
+                    className="text-7xl mb-6 drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]"
+                  >
+                    {subjectPlayer?.avatar}
+                  </motion.div>
+                  <div className="text-sm text-fuchsia-300 uppercase tracking-widest font-black mb-2">جواب {subjectPlayer?.name}</div>
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 via-white to-cyan-400 text-center px-4 py-2"
+                  >
+                    &quot;{room.subjectAnswer}&quot;
+                  </motion.div>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-4 mb-8">
-                  {room.players.filter(p => p.id !== room.subjectId).map(p => {
+                <div className="grid sm:grid-cols-2 gap-4 mb-10">
+                  {room.players.filter(p => p.id !== room.subjectId).map((p, idx) => {
                     const isCorrect = room.state === 'SCORE' && p.prediction?.toLowerCase().trim() === room.subjectAnswer?.toLowerCase().trim();
                     return (
                       <motion.div 
                         key={p.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`p-4 rounded-xl border ${
+                        initial={{ opacity: 0, x: idx % 2 === 0 ? -20 : 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.5 + (idx * 0.1) }}
+                        className={`p-5 rounded-2xl border-2 transition-all duration-500 ${
                           room.state === 'SCORE' 
                             ? isCorrect 
-                              ? 'bg-green-500/20 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.2)]' 
-                              : 'bg-red-500/10 border-red-500/20 opacity-70'
-                            : 'bg-black/20 border-white/10'
+                              ? 'bg-green-500/20 border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.3)] scale-105 z-10' 
+                              : 'bg-red-500/10 border-red-500/20 opacity-50 grayscale-[0.5]'
+                            : 'bg-black/30 border-white/10'
                         }`}
                       >
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="text-2xl">{p.avatar}</span>
-                          <span className="font-bold flex-1">{p.name}</span>
-                          {room.state === 'SCORE' && isCorrect && <span className="text-green-400 font-bold">+100</span>}
+                        <div className="flex items-center gap-4 mb-3">
+                          <div className="relative">
+                            <span className="text-3xl">{p.avatar}</span>
+                            {room.state === 'SCORE' && isCorrect && (
+                              <motion.div 
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute -top-2 -right-2 bg-green-500 rounded-full p-1"
+                              >
+                                <CheckCircle2 className="w-3 h-3 text-white" />
+                              </motion.div>
+                            )}
+                          </div>
+                          <span className="font-bold text-lg flex-1 truncate">{p.name}</span>
+                          {room.state === 'SCORE' && isCorrect && (
+                            <motion.span 
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="text-green-400 font-black text-xl drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]"
+                            >
+                              +100
+                            </motion.span>
+                          )}
                         </div>
-                        <div className="text-lg text-white/90 italic">"{p.prediction}"</div>
+                        <div className="text-xl text-white/90 font-medium italic bg-black/20 p-3 rounded-xl border border-white/5">
+                          &quot;{p.prediction}&quot;
+                        </div>
                       </motion.div>
                     );
                   })}
                 </div>
 
                 {player.isHost && (
-                  <div className="flex justify-center">
+                  <div className="flex justify-center pt-4">
                     {room.state === 'REVEAL' ? (
                       <button 
                         onClick={revealAnswers}
-                        className="py-4 px-8 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold shadow-lg transition-all text-lg flex items-center gap-2"
+                        className="py-5 px-12 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-400 hover:to-red-400 text-white font-black shadow-[0_0_30px_rgba(245,158,11,0.4)] transition-all hover:scale-105 active:scale-95 text-xl flex items-center gap-3 group"
                       >
-                        <Trophy className="w-5 h-5" /> احسب النقاط
+                        <Trophy className="w-6 h-6 group-hover:rotate-12 transition-transform" /> احسب النقاط
                       </button>
                     ) : (
                       <button 
                         onClick={nextRound}
-                        className="py-4 px-8 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold shadow-lg transition-all text-lg flex items-center gap-2"
+                        className="py-5 px-12 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-black shadow-[0_0_30px_rgba(6,182,212,0.4)] transition-all hover:scale-105 active:scale-95 text-xl flex items-center gap-3 group"
                       >
-                        الجولة الجاية <ArrowRight className="w-5 h-5 rotate-180" />
+                        الجولة الجاية <ArrowRight className="w-6 h-6 rotate-180 group-hover:-translate-x-2 transition-transform" />
                       </button>
                     )}
                   </div>
@@ -357,21 +391,35 @@ export default function RoomPage() {
               {/* Leaderboard */}
               {room.state === 'SCORE' && (
                 <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-black/30 backdrop-blur-md rounded-2xl p-6 border border-white/10"
+                  className="bg-black/40 backdrop-blur-2xl rounded-3xl p-8 border border-white/10 shadow-3xl"
                 >
-                  <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-amber-400">
-                    <Trophy className="w-5 h-5" /> الترتيب
+                  <h3 className="text-2xl font-black mb-6 flex items-center gap-3 text-amber-400">
+                    <Trophy className="w-7 h-7" /> الترتيب الحالي
                   </h3>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {[...room.players].sort((a, b) => b.score - a.score).map((p, i) => (
-                      <div key={p.id} className="flex items-center gap-4 p-3 rounded-lg bg-white/5">
-                        <div className="w-6 text-center font-bold text-purple-300">#{i + 1}</div>
-                        <span className="text-2xl">{p.avatar}</span>
-                        <div className="flex-1 font-bold">{p.name}</div>
-                        <div className="font-mono text-xl text-amber-400">{p.score}</div>
-                      </div>
+                      <motion.div 
+                        key={p.id} 
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className={`flex items-center gap-5 p-4 rounded-2xl transition-colors ${
+                          i === 0 ? 'bg-amber-500/20 border border-amber-500/30' : 'bg-white/5 border border-white/5'
+                        }`}
+                      >
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-xl ${
+                          i === 0 ? 'bg-amber-500 text-black' : 
+                          i === 1 ? 'bg-slate-300 text-black' : 
+                          i === 2 ? 'bg-amber-700 text-white' : 'text-purple-300'
+                        }`}>
+                          {i + 1}
+                        </div>
+                        <span className="text-4xl">{p.avatar}</span>
+                        <div className="flex-1 font-bold text-xl">{p.name}</div>
+                        <div className="font-mono text-2xl font-black text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]">{p.score}</div>
+                      </motion.div>
                     ))}
                   </div>
                 </motion.div>

@@ -26,7 +26,6 @@ function HomeContent() {
     if (roomParam) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setRoomCode(roomParam);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsJoining(true);
     }
   }, [searchParams]);
@@ -105,13 +104,17 @@ function HomeContent() {
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20"
+        className="w-full max-w-md bg-white/10 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/20 relative overflow-hidden"
       >
-        <div className="space-y-6">
+        {/* Decorative background circle */}
+        <div className="absolute -top-24 -right-24 w-48 h-48 bg-fuchsia-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl" />
+
+        <div className="space-y-6 relative z-10">
           <div>
             <label className="block text-sm font-medium text-purple-200 mb-2">اسمك</label>
-            <div className="relative">
-              <User className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-300 w-5 h-5" />
+            <div className="relative group">
+              <User className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-300 w-5 h-5 group-focus-within:text-fuchsia-400 transition-colors" />
               <input 
                 type="text" 
                 value={name}
@@ -124,16 +127,16 @@ function HomeContent() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-purple-200 mb-2">اختر شخصيتك</label>
-            <div className="flex flex-wrap gap-2 justify-center">
+            <label className="block text-sm font-medium text-purple-200 mb-2 text-center">اختر شخصيتك</label>
+            <div className="grid grid-cols-5 gap-2">
               {AVATARS.map((a) => (
                 <button
                   key={a}
                   onClick={() => setAvatar(a)}
-                  className={`text-3xl p-2 rounded-xl transition-all ${
+                  className={`text-3xl p-2 rounded-xl transition-all duration-300 ${
                     avatar === a 
-                      ? 'bg-fuchsia-500/40 scale-110 shadow-[0_0_15px_rgba(217,70,239,0.5)]' 
-                      : 'hover:bg-white/10 hover:scale-105'
+                      ? 'bg-fuchsia-500/40 scale-110 shadow-[0_0_20px_rgba(217,70,239,0.6)] border border-fuchsia-400/50' 
+                      : 'hover:bg-white/10 hover:scale-105 border border-transparent'
                   }`}
                 >
                   {a}
@@ -145,12 +148,13 @@ function HomeContent() {
           <div className="pt-4 border-t border-white/10">
             {isConnecting ? (
               <div className="text-center p-4 text-purple-200 flex flex-col items-center gap-2">
-                <Loader2 className="w-6 h-6 animate-spin text-fuchsia-400" />
-                <span>جاري الاتصال بالسيرفر...</span>
+                <Loader2 className="w-8 h-8 animate-spin text-fuchsia-400" />
+                <span className="animate-pulse">جاري الاتصال بالسيرفر...</span>
               </div>
             ) : connectionError ? (
               <div className="text-center p-4 text-red-400 bg-red-500/10 rounded-xl border border-red-500/20">
                 {connectionError}
+                <button onClick={() => window.location.reload()} className="block mx-auto mt-2 text-sm underline">تحديث الصفحة</button>
               </div>
             ) : isJoining ? (
               <div className="space-y-4">
@@ -161,7 +165,7 @@ function HomeContent() {
                     value={roomCode}
                     onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                     placeholder="مثال: 1234"
-                    className="w-full bg-black/20 border border-purple-500/30 rounded-xl py-3 px-4 text-white text-center text-2xl tracking-widest placeholder:text-purple-300/30 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all uppercase"
+                    className="w-full bg-black/20 border border-purple-500/30 rounded-xl py-4 px-4 text-white text-center text-3xl font-bold tracking-[0.5em] placeholder:text-purple-300/20 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all uppercase"
                     maxLength={4}
                     dir="ltr"
                   />
@@ -169,7 +173,7 @@ function HomeContent() {
                 <div className="flex gap-3">
                   <button 
                     onClick={() => setIsJoining(false)}
-                    className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium transition-all"
+                    className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-medium transition-all border border-white/10"
                   >
                     رجوع
                   </button>
@@ -187,9 +191,9 @@ function HomeContent() {
                 <button 
                   onClick={handleCreateRoom}
                   disabled={!name.trim()}
-                  className="w-full py-4 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white font-bold shadow-[0_0_20px_rgba(192,38,211,0.4)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-lg"
+                  className="w-full py-4 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white font-bold shadow-[0_0_25px_rgba(192,38,211,0.5)] disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-lg group"
                 >
-                  <Sparkles className="w-5 h-5" /> سو غرفة جديدة
+                  <Sparkles className="w-5 h-5 group-hover:rotate-12 transition-transform" /> سو غرفة جديدة
                 </button>
                 <button 
                   onClick={() => setIsJoining(true)}
@@ -199,6 +203,37 @@ function HomeContent() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      </motion.div>
+
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="mt-12 max-w-md w-full text-center"
+      >
+        <h3 className="text-purple-300 font-bold mb-4 flex items-center justify-center gap-2">
+          <div className="h-px w-8 bg-purple-500/30" />
+          كيف تلعب؟
+          <div className="h-px w-8 bg-purple-500/30" />
+        </h3>
+        <div className="grid grid-cols-2 gap-4 text-xs text-purple-300/60">
+          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+            <span className="block text-fuchsia-400 font-bold mb-1">1. الضحية</span>
+            واحد منكم يصير الضحية ونجاوب على سؤال عنه
+          </div>
+          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+            <span className="block text-cyan-400 font-bold mb-1">2. التوقع</span>
+            الباقين يتوقعون وش بيجاوب الضحية
+          </div>
+          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+            <span className="block text-amber-400 font-bold mb-1">3. المطابقة</span>
+            إذا توقعك نفس جوابه، مبروك النقاط!
+          </div>
+          <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+            <span className="block text-green-400 font-bold mb-1">4. الفوز</span>
+            اللي يجمع أكثر نقاط هو اللي يعرف أخوياه صح
           </div>
         </div>
       </motion.div>

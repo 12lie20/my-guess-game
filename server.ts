@@ -51,6 +51,7 @@ type Room = {
   currentQuestion?: string;
   subjectAnswer?: string;
   round: number;
+  subjectIndex: number;
 };
 
 const rooms = new Map<string, Room>();
@@ -64,6 +65,98 @@ const QUESTIONS = [
   "وش أكثر موقف محرج صار لك؟",
   "وش هوايتك المفضلة؟",
   "لو طاح عليك مليون ريال فجأة، وش أول شيء بتشتريه؟",
+  "وش أكثر صفة تحبها في نفسك؟",
+  "لو تقدر ترجع بالزمن، لأي سنة بترجع؟",
+  "وش الشيء اللي مستحيل تسويه لو ايش ما صار؟",
+  "وش أكثر كلمة ترددها دايم؟",
+  "لو كنت حيوان، وش ودك تكون؟",
+  "وش أفضل مطعم جربته في حياتك؟",
+  "وش الشيء اللي يخليك تعصب بسرعة؟",
+  "لو خيروك تعيش في الماضي أو المستقبل، وش تختار؟",
+  "وش أكثر تطبيق تستخدمه في جوالك؟",
+  "وش الشيء اللي دايم يضحكك؟",
+  "لو تقدر تقابل شخصية مشهورة (حية أو ميتة)، مين بتختار؟",
+  "وش أغرب أكلة جربتها؟",
+  "لو كنت رئيس دولة ليوم واحد، وش أول قرار بتتخذه؟",
+  "وش الشيء اللي ندمت انك ما سويته؟",
+  "لو تقدر تغير اسمك، وش بتسمي نفسك؟",
+  "وش أكثر شيء يخليك فخور بنفسك؟",
+  "لو كنت في جزيرة مهجورة، وش الثلاث أشياء اللي بتاخذها معك؟",
+  "وش الشيء اللي كنت تحبه وانت صغير والحين كرهته؟",
+  "لو تقدر تتعلم لغة جديدة في ثانية، وش بتختار؟",
+  "وش أكثر شيء يشدك في الشخص اللي قدامك؟",
+  "لو تقدر تغير شيء واحد في العالم، وش بيكون؟",
+  "وش الشيء اللي دايم تضيعه؟",
+  "لو كنت بطل في لعبة فيديو، وش بتكون اللعبة؟",
+  "وش أكثر شيء يخليك تحس بالسعادة؟",
+  "لو تقدر تسكن في أي مكان في العالم، وين بتختار؟",
+  "وش الشيء اللي تمنيت انك عرفته قبل خمس سنين؟",
+  "لو تقدر تكون خبير في أي مجال، وش بتختار؟",
+  "وش أكثر شيء يخليك تحس بالراحة؟",
+  "لو تقدر تغير عادة وحدة فيك، وش بتكون؟",
+  "وش الشيء اللي دايم يخليك تفكر قبل ما تنام؟",
+  "لو كنت تقدر تطير، وين أول مكان بتروح له؟",
+  "وش أكثر شيء يخليك تحس بالامتنان؟",
+  "لو تقدر تعيش حياة شخص ثاني ليوم واحد، مين بيكون؟",
+  "وش الشيء اللي دايم يخليك تبتسم؟",
+  "لو تقدر تخفي شيء واحد من العالم، وش بيكون؟",
+  "وش أكثر شيء يخليك تحس بالثقة؟",
+  "لو تقدر ترجع طفل ليوم واحد، وش بتسوي؟",
+  "وش الشيء اللي دايم يخليك تحس بالفضول؟",
+  "لو تقدر تكون في مكانين في نفس الوقت، وين بتكون؟",
+  "وش أكثر شيء يخليك تحس بالهدوء؟",
+  "لو تقدر تغير نهايتك المفضلة في فيلم أو كتاب، وش بتغير؟",
+  "وش الشيء اللي دايم يخليك تحس بالنشاط؟",
+  "لو تقدر تكون عندك موهبة فنية، وش بتختار؟",
+  "وش أكثر شيء يخليك تحس بالانتماء؟",
+  "لو تقدر تسافر للفضاء، وش أول كوكب بتزوره؟",
+  "وش الشيء اللي دايم يخليك تحس بالتحدي؟",
+  "لو تقدر تكون عندك ذاكرة صورية، وش أول شيء بتحفظه؟",
+  "وش أكثر شيء يخليك تحس بالرضا؟",
+  "لو تقدر تغير فصول السنة، وش الفصل اللي بتخليه دايم؟",
+  "وش الشيء اللي دايم يخليك تحس بالإلهام؟",
+  "لو تقدر تكون عندك قدرة التحدث مع الحيوانات، وش أول حيوان بتكلمه؟",
+  "وش أكثر شيء يخليك تحس بالجمال؟",
+  "لو تقدر تعيش في عالم خيالي، وش بيكون؟",
+  "وش الشيء اللي دايم يخليك تحس بالتفاؤل؟",
+  "لو تقدر تكون عندك قدرة التنفس تحت الماء، وين بتغوص؟",
+  "وش أكثر شيء يخليك تحس بالحب؟",
+  "لو تقدر تغير تاريخ ميلادك، لأي يوم بتغيره؟",
+  "وش الشيء اللي دايم يخليك تحس بالدهشة؟",
+  "لو تقدر تكون عندك قدرة الاختفاء، وش بتسوي؟",
+  "وش أكثر شيء يخليك تحس بالأمان؟",
+  "لو تقدر تعيش في عصر النهضة أو العصور الوسطى، وش تختار؟",
+  "وش الشيء اللي دايم يخليك تحس بالحرية؟",
+  "لو تقدر تكون عندك قدرة قراءة الأفكار، مين أول شخص بتقرأ أفكاره؟",
+  "وش أكثر شيء يخليك تحس بالتميز؟",
+  "لو تقدر تغير لون السماء، وش بتخليه؟",
+  "وش الشيء اللي دايم يخليك تحس بالارتباط؟",
+  "لو تقدر تكون عندك قدرة التحكم في الوقت، وش بتسوي؟",
+  "وش أكثر شيء يخليك تحس بالبهجة؟",
+  "لو تقدر تعيش في مدينة تحت البحر، وش بتسميها؟",
+  "وش الشيء اللي دايم يخليك تحس بالقوة؟",
+  "لو تقدر تكون عندك قدرة الشفاء السريع، وش بتسوي؟",
+  "وش أكثر شيء يخليك تحس بالسلام؟",
+  "لو تقدر تغير طعم أكلك المفضل، وش بتخليه؟",
+  "وش الشيء اللي دايم يخليك تحس بالتركيز؟",
+  "لو تقدر تكون عندك قدرة الرؤية في الظلام، وين بتروح؟",
+  "وش أكثر شيء يخليك تحس بالحماس؟",
+  "لو تقدر تعيش في غابة مطيرة، وش بتسوي؟",
+  "وش الشيء اللي دايم يخليك تحس بالوضوح؟",
+  "لو تقدر تكون عندك قدرة المشي على الجدران، وين بتوصل؟",
+  "وش أكثر شيء يخليك تحس بالتوازن؟",
+  "لو تقدر تغير رائحة المطر، وش بتخليها؟",
+  "وش الشيء اللي دايم يخليك تحس بالعمق؟",
+  "لو تقدر تكون عندك قدرة التحول لأي شخص، مين بتختار؟",
+  "وش أكثر شيء يخليك تحس بالاتصال؟",
+  "لو تقدر تعيش في قلعة قديمة، وش بتسوي فيها؟",
+  "وش الشيء اللي دايم يخليك تحس بالنمو؟",
+  "لو تقدر تكون عندك قدرة استدعاء أي شيء، وش بتطلب؟",
+  "وش أكثر شيء يخليك تحس بالكمال؟",
+  "لو تقدر تغير صوتك، وش بتخليه يشبه؟",
+  "وش الشيء اللي دايم يخليك تحس بالبساطة؟",
+  "لو تقدر تكون عندك قدرة الجري بسرعة البرق، وين بتروح؟",
+  "وش أكثر شيء يخليك تحس بالروعة؟",
 ];
 
 app.prepare().then(() => {
@@ -102,6 +195,7 @@ app.prepare().then(() => {
           players: [newPlayer],
           state: 'LOBBY',
           round: 1,
+          subjectIndex: -1,
         });
 
         socket.join(roomId);
@@ -152,6 +246,7 @@ app.prepare().then(() => {
 
       if (room.players.length < 2) return;
 
+      room.subjectIndex = -1; // Reset for start
       startNewRound(roomId);
     });
 
@@ -161,6 +256,9 @@ app.prepare().then(() => {
       const room = rooms.get(roomId);
       if (!room) return;
 
+      const player = room.players.find(p => p.id === socket.id);
+      if (!player) return;
+
       const sanitizedAnswer = xss(answer).substring(0, 100);
 
       if (room.state === 'QUESTION' && socket.id === room.subjectId) {
@@ -168,20 +266,19 @@ app.prepare().then(() => {
         room.state = 'PREDICTION';
         io.to(roomId).emit('room_update', room);
       } else if (room.state === 'PREDICTION' && socket.id !== room.subjectId) {
-        const player = room.players.find(p => p.id === socket.id);
-        if (player) {
-          player.prediction = sanitizedAnswer;
-          io.to(roomId).emit('player_typing', { playerId: socket.id, status: 'Submitted' });
+        if (player.prediction) return; // Already submitted
+        
+        player.prediction = sanitizedAnswer;
+        io.to(roomId).emit('player_typing', { playerId: socket.id, status: 'Submitted' });
+        
+        // Check if all non-subject players have submitted
+        const allSubmitted = room.players
+          .filter(p => p.id !== room.subjectId)
+          .every(p => p.prediction);
           
-          // Check if all non-subject players have submitted
-          const allSubmitted = room.players
-            .filter(p => p.id !== room.subjectId)
-            .every(p => p.prediction);
-            
-          if (allSubmitted) {
-            room.state = 'REVEAL';
-            io.to(roomId).emit('room_update', room);
-          }
+        if (allSubmitted) {
+          room.state = 'REVEAL';
+          io.to(roomId).emit('room_update', room);
         }
       }
     });
@@ -190,21 +287,24 @@ app.prepare().then(() => {
       if (!checkRateLimit(socket.id)) return;
       const room = rooms.get(roomId);
       if (room && room.state === 'PREDICTION' && socket.id !== room.subjectId) {
-        socket.to(roomId).emit('player_typing', { playerId: socket.id, status: 'typing' });
+        const player = room.players.find(p => p.id === socket.id);
+        if (player && !player.prediction) {
+          socket.to(roomId).emit('player_typing', { playerId: socket.id, status: 'typing' });
+        }
       }
     });
 
     socket.on('reveal_answers', (roomId) => {
       if (!checkRateLimit(socket.id)) return;
       const room = rooms.get(roomId);
-      if (!room) return;
+      if (!room || room.state !== 'REVEAL') return;
       
       const player = room.players.find(p => p.id === socket.id);
       if (!player?.isHost) return;
 
       room.state = 'SCORE';
       
-      // Calculate scores (simple exact match for now, could be improved)
+      // Calculate scores
       const subjectAnswerLower = room.subjectAnswer?.toLowerCase().trim();
       room.players.forEach(p => {
         if (p.id !== room.subjectId && p.prediction) {
@@ -220,7 +320,7 @@ app.prepare().then(() => {
     socket.on('next_round', (roomId) => {
       if (!checkRateLimit(socket.id)) return;
       const room = rooms.get(roomId);
-      if (!room) return;
+      if (!room || room.state !== 'SCORE') return;
       
       const player = room.players.find(p => p.id === socket.id);
       if (!player?.isHost) return;
@@ -237,6 +337,8 @@ app.prepare().then(() => {
         const playerIndex = room.players.findIndex(p => p.id === socket.id);
         if (playerIndex !== -1) {
           const wasHost = room.players[playerIndex].isHost;
+          const wasSubject = room.subjectId === socket.id;
+          
           room.players.splice(playerIndex, 1);
           
           if (room.players.length === 0) {
@@ -245,7 +347,18 @@ app.prepare().then(() => {
             if (wasHost) {
               room.players[0].isHost = true;
             }
-            io.to(roomId).emit('room_update', room);
+            
+            // If the subject left during a round, we need to handle it
+            if (wasSubject && room.state !== 'LOBBY' && room.state !== 'SCORE') {
+              room.round++;
+              startNewRound(roomId);
+            } else {
+              // Adjust subjectIndex if needed
+              if (room.subjectIndex >= room.players.length) {
+                room.subjectIndex = 0;
+              }
+              io.to(roomId).emit('room_update', room);
+            }
           }
         }
       }
@@ -259,9 +372,9 @@ app.prepare().then(() => {
       room.players.forEach(p => p.prediction = undefined);
       room.subjectAnswer = undefined;
 
-      // Select random subject
-      const subjectIndex = Math.floor(Math.random() * room.players.length);
-      room.subjectId = room.players[subjectIndex].id;
+      // Select sequential subject
+      room.subjectIndex = (room.subjectIndex + 1) % room.players.length;
+      room.subjectId = room.players[room.subjectIndex].id;
 
       // Select random question
       const questionIndex = Math.floor(Math.random() * QUESTIONS.length);
