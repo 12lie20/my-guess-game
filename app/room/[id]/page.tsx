@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import { motion, AnimatePresence } from 'motion/react';
-import { Copy, Users, Play, CheckCircle2, Loader2, Trophy, ArrowRight } from 'lucide-react';
+import { Copy, Users, Play, CheckCircle2, Loader2, Trophy, ArrowRight, Flame, Zap, Lightbulb } from 'lucide-react';
+
+const REACTIONS = ['😂', '😱', '👏', '🔥', '🤔', '😎', '❤️', '💯'];
 
 function normalizeArabic(text: string): string {
   if (!text) return '';
@@ -31,9 +33,10 @@ function isMatch(answer1: string, answer2: string): boolean {
 export default function RoomPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { socket, room, player, setRoom, typingStatus } = useGameStore();
+  const { socket, room, player, setRoom, typingStatus, reactions, addReaction, clearReactions } = useGameStore();
   const [answer, setAnswer] = useState('');
   const [copied, setCopied] = useState(false);
+  const [hint, setHint] = useState('');
 
   useEffect(() => {
     if (!player) {
@@ -45,11 +48,14 @@ export default function RoomPage() {
 
     socket.on('room_update', (updatedRoom: any) => {
       setRoom(updatedRoom);
+      setHint('');
       if (updatedRoom.state === 'QUESTION') {
         setAnswer('');
         useGameStore.getState().clearTypingStatus();
       } else if (updatedRoom.state === 'PREDICTION') {
         setAnswer('');
+      } else if (updatedRoom.state === 'REVEAL' || updatedRoom.state === 'SCORE') {
+        useGameStore.getState().clearTypingStatus();
       }
     });
 
@@ -57,11 +63,21 @@ export default function RoomPage() {
       useGameStore.getState().setTypingStatus(playerId, status);
     });
 
+    socket.on('new_reaction', (reaction: any) => {
+      addReaction(reaction);
+    });
+
+    socket.on('hint_received', ({ hint }: any) => {
+      setHint(hint);
+    });
+
     return () => {
       socket.off('room_update');
       socket.off('player_typing');
+      socket.off('new_reaction');
+      socket.off('hint_received');
     };
-  }, [socket, player, router, setRoom, id]);
+  }, [socket, player, router, setRoom, id, addReaction, clearReactions]);
 
   if (!room || !player) return null;
 
@@ -86,12 +102,25 @@ export default function RoomPage() {
     socket.emit('typing', { roomId: id });
   };
 
+  const useDouble = () => {
+    socket.emit('use_double', id);
+  };
+
+  const useHint = () => {
+    socket.emit('use_hint', id);
+  };
+
+  const sendReaction = (emoji: string) => {
+    socket.emit('send_reaction', { roomId: id, emoji });
+  };
+
   const revealAnswers = () => {
     socket.emit('reveal_answers', id);
   };
 
   const nextRound = () => {
     socket.emit('next_round', id);
+    clearReactions();
   };
 
   const isSubject = room.subjectId === player.id;
@@ -269,6 +298,12 @@ export default function RoomPage() {
                         ) : (
                           <>
                             <p className="text-cyan-300 font-medium mb-4">وش تتوقع {subjectPlayer?.name} جاوب؟</p>
+                            {hint && (
+                              <div className="mb-4 p-3 bg-amber-500/20 border border-amber-500/40 rounded-xl text-center">
+                                <span className="text-amber-300">التلميحة: </span>
+                                <span className="text-amber-200 font-bold text-xl">{hint}</span>
+                              </div>
+                            )}
                             <input 
                               type="text" 
                               value={answer}
@@ -276,13 +311,40 @@ export default function RoomPage() {
                               placeholder="توقعك..."
                               className="w-full bg-black/30 border border-cyan-500/50 rounded-xl py-4 px-6 text-white text-xl placeholder:text-purple-300/30 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all text-center"
                             />
-                            <button 
-                              onClick={submitAnswer}
-                              disabled={!answer.trim()}
-                              className="w-full py-4 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold shadow-lg disabled:opacity-50 transition-all text-lg mt-4"
-                            >
-                              ارسل توقعك
-                            </button>
+                            <div className="flex gap-3 mt-4">
+                              <button 
+                                onClick={submitAnswer}
+                                disabled={!answer.trim()}
+                                className="flex-1 py-4 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold shadow-lg disabled:opacity-50 transition-all text-lg"
+                              >
+                                ارسل توقعك
+                              </button>
+                              {!player.usedDouble && (
+                                <button 
+                                  onClick={useDouble}
+                                  disabled={!answer.trim()}
+                                  className="px-4 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white font-bold shadow-lg disabled:opacity-50 transition-all flex items-center gap-2"
+                                  title="ضاعف نقاطك!"
+                                >
+                                  <Zap className="w-5 h-5" /> دبل
+                                </button>
+                              )}
+                            </div>
+                            {!player.usedHint && !player.usedDouble && player.score >= 50 && !hint && (
+                              <button 
+                                onClick={useHint}
+                                className="w-full py-3 mt-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-medium transition-all flex items-center justify-center gap-2"
+                              >
+                                <Lightbulb className="w-5 h-5" /> اشترِ تلميحة (-50 نقطة)
+                              </button>
+                            )}
+                            {player.usedDouble && (
+                              <div className="mt-3 p-2 bg-orange-500/20 border border-orange-500/40 rounded-xl text-center">
+                                <span className="text-orange-300 font-bold flex items-center justify-center gap-2">
+                                  <Zap className="w-4 h-4" /> الدبل مفعل! (+200 نقطة)
+                                </span>
+                              </div>
+                            )}
                           </>
                         )}
                       </>
@@ -297,7 +359,15 @@ export default function RoomPage() {
                   <div key={p.id} className="bg-black/20 rounded-xl p-3 border border-white/5 flex items-center gap-3">
                     <span className="text-2xl">{p.avatar}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold truncate">{p.name}</div>
+                      <div className="text-sm font-bold truncate flex items-center gap-1">
+                        {p.name}
+                        {p.winStreak >= 2 && (
+                          <span className="flex items-center gap-0.5 text-orange-400">
+                            <Flame className="w-3 h-3" />
+                            <span className="text-xs">{p.winStreak}</span>
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-purple-300 truncate">
                         {p.prediction || typingStatus[p.id] === 'Submitted' ? (
                           <span className="text-green-400 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> جاهز</span>
@@ -373,14 +443,22 @@ export default function RoomPage() {
                               </motion.div>
                             )}
                           </div>
-                          <span className="font-bold text-lg flex-1 truncate">{p.name}</span>
+                          <span className="font-bold text-lg flex-1 truncate flex items-center gap-1">
+                            {p.name}
+                            {p.winStreak >= 2 && (
+                              <span className="flex items-center gap-0.5 text-orange-400">
+                                <Flame className="w-3 h-3" />
+                                <span className="text-xs">{p.winStreak}</span>
+                              </span>
+                            )}
+                          </span>
                           {room.state === 'SCORE' && isCorrect && (
                             <motion.span 
                               initial={{ scale: 0 }}
                               animate={{ scale: 1 }}
                               className="text-green-400 font-black text-xl drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]"
                             >
-                              +100
+                              {p.usedDouble ? '+200' : '+100'}
                             </motion.span>
                           )}
                         </div>
@@ -390,6 +468,38 @@ export default function RoomPage() {
                       </motion.div>
                     );
                   })}
+                </div>
+
+                {/* Reactions Bar */}
+                <div className="mt-6 pt-6 border-t border-white/10">
+                  <p className="text-center text-purple-300 mb-3 text-sm">تفاعل مع الإجابات!</p>
+                  <div className="flex justify-center gap-2 flex-wrap">
+                    {REACTIONS.map((emoji) => (
+                      <motion.button
+                        key={emoji}
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => sendReaction(emoji)}
+                        className="text-2xl p-2 hover:bg-white/10 rounded-full transition-colors"
+                      >
+                        {emoji}
+                      </motion.button>
+                    ))}
+                  </div>
+                  {reactions.length > 0 && (
+                    <div className="mt-4 flex justify-center gap-1 flex-wrap">
+                      {reactions.slice(-10).map((r, idx) => (
+                        <motion.span
+                          key={idx}
+                          initial={{ scale: 0, y: 20, opacity: 0 }}
+                          animate={{ scale: 1, y: 0, opacity: 1 }}
+                          className="text-2xl"
+                        >
+                          {r.emoji}
+                        </motion.span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {player.isHost && (
@@ -442,7 +552,15 @@ export default function RoomPage() {
                           {i + 1}
                         </div>
                         <span className="text-4xl">{p.avatar}</span>
-                        <div className="flex-1 font-bold text-xl">{p.name}</div>
+                        <div className="flex-1 font-bold text-xl flex items-center gap-2">
+                          {p.name}
+                          {p.winStreak >= 2 && (
+                            <span className="flex items-center gap-1 text-orange-400 bg-orange-400/10 px-2 py-1 rounded-full">
+                              <Flame className="w-4 h-4" />
+                              <span className="text-sm">{p.winStreak}</span>
+                            </span>
+                          )}
+                        </div>
                         <div className="font-mono text-2xl font-black text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]">{p.score}</div>
                       </motion.div>
                     ))}

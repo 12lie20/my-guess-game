@@ -8,9 +8,18 @@ export type Player = {
   isHost: boolean;
   prediction?: string;
   isReady: boolean;
+  winStreak: number;
+  usedDouble: boolean;
+  usedHint: boolean;
 };
 
 export type RoomState = 'LOBBY' | 'QUESTION' | 'PREDICTION' | 'REVEAL' | 'SCORE';
+
+export type Reaction = {
+  playerId: string;
+  emoji: string;
+  timestamp: number;
+};
 
 export type Room = {
   id: string;
@@ -20,6 +29,8 @@ export type Room = {
   currentQuestion?: string;
   subjectAnswer?: string;
   round: number;
+  subjectIndex: number;
+  reactions: Reaction[];
 };
 
 type GameStore = {
@@ -32,6 +43,9 @@ type GameStore = {
   typingStatus: Record<string, string>;
   setTypingStatus: (playerId: string, status: string) => void;
   clearTypingStatus: () => void;
+  reactions: Reaction[];
+  addReaction: (reaction: Reaction) => void;
+  clearReactions: () => void;
 };
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -46,4 +60,9 @@ export const useGameStore = create<GameStore>((set) => ({
     typingStatus: { ...state.typingStatus, [playerId]: status }
   })),
   clearTypingStatus: () => set({ typingStatus: {} }),
+  reactions: [],
+  addReaction: (reaction) => set((state) => ({ 
+    reactions: [...state.reactions, reaction] 
+  })),
+  clearReactions: () => set({ reactions: [] }),
 }));

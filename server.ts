@@ -71,9 +71,18 @@ type Player = {
   isHost: boolean;
   prediction?: string;
   isReady: boolean;
+  winStreak: number;
+  usedDouble: boolean;
+  usedHint: boolean;
 };
 
 type RoomState = 'LOBBY' | 'QUESTION' | 'PREDICTION' | 'REVEAL' | 'SCORE';
+
+type Reaction = {
+  playerId: string;
+  emoji: string;
+  timestamp: number;
+};
 
 type Room = {
   id: string;
@@ -84,6 +93,7 @@ type Room = {
   subjectAnswer?: string;
   round: number;
   subjectIndex: number;
+  reactions: Reaction[];
 };
 
 const rooms = new Map<string, Room>();
@@ -220,6 +230,9 @@ app.prepare().then(() => {
           score: 0,
           isHost: true,
           isReady: false,
+          winStreak: 0,
+          usedDouble: false,
+          usedHint: false,
         };
 
         rooms.set(roomId, {
@@ -228,6 +241,7 @@ app.prepare().then(() => {
           state: 'LOBBY',
           round: 1,
           subjectIndex: -1,
+          reactions: [],
         });
 
         socket.join(roomId);
@@ -251,13 +265,17 @@ app.prepare().then(() => {
       }
 
       const sanitizedName = xss(name).substring(0, 20);
+      const isFirstPlayer = room.players.length === 0;
       const newPlayer: Player = {
         id: socket.id,
         name: sanitizedName,
         avatar,
         score: 0,
-        isHost: room.players.length === 0,
+        isHost: isFirstPlayer,
         isReady: false,
+        winStreak: 0,
+        usedDouble: false,
+        usedHint: false,
       };
 
       room.players.push(newPlayer);
@@ -341,7 +359,11 @@ app.prepare().then(() => {
       room.players.forEach(p => {
         if (p.id !== room.subjectId && p.prediction) {
           if (isMatch(p.prediction, subjectAnswer)) {
-            p.score += 100;
+            const points = p.usedDouble ? 200 : 100;
+            p.score += points;
+            p.winStreak += 1;
+          } else {
+            p.winStreak = 0;
           }
         }
       });
@@ -359,6 +381,53 @@ app.prepare().then(() => {
 
       room.round++;
       startNewRound(roomId);
+    });
+
+    socket.on('use_double', (roomId) => {
+      const room = rooms.get(roomId);
+      if (!room || room.state !== 'PREDICTION') return;
+      
+      const player = room.players.find(p => p.id === socket.id);
+      if (!player || player.prediction || player.usedDouble) return;
+      
+      player.usedDouble = true;
+      io.to(roomId).emit('room_update', room);
+    });
+
+    socket.on('use_hint', (roomId) => {
+      const room = rooms.get(roomId);
+      if (!room || room.state !== 'PREDICTION') return;
+      
+      const player = room.players.find(p => p.id === socket.id);
+      if (!player || player.prediction || player.usedHint) return;
+      
+      if (player.score < 50) return;
+      
+      player.score -= 50;
+      player.usedHint = true;
+      
+      const subjectAnswer = room.subjectAnswer || '';
+      const hint = subjectAnswer.length > 0 ? subjectAnswer[0] + '...' : '...';
+      
+      io.to(roomId).emit('room_update', room);
+      socket.emit('hint_received', { hint });
+    });
+
+    socket.on('send_reaction', ({ roomId, emoji }) => {
+      const room = rooms.get(roomId);
+      if (!room || (room.state !== 'REVEAL' && room.state !== 'SCORE')) return;
+      
+      const player = room.players.find(p => p.id === socket.id);
+      if (!player) return;
+      
+      const reaction: Reaction = {
+        playerId: socket.id,
+        emoji: xss(emoji).substring(0, 10),
+        timestamp: Date.now(),
+      };
+      
+      room.reactions.push(reaction);
+      io.to(roomId).emit('new_reaction', reaction);
     });
 
     socket.on('disconnect', () => {
@@ -400,9 +469,14 @@ app.prepare().then(() => {
       const room = rooms.get(roomId);
       if (!room) return;
 
-      // Reset predictions and answers
-      room.players.forEach(p => p.prediction = undefined);
+      // Reset predictions, answers, double, hint, and reactions
+      room.players.forEach(p => {
+        p.prediction = undefined;
+        p.usedDouble = false;
+        p.usedHint = false;
+      });
       room.subjectAnswer = undefined;
+      room.reactions = [];
 
       // Select sequential subject
       room.subjectIndex = (room.subjectIndex + 1) % room.players.length;
