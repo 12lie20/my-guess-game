@@ -487,17 +487,22 @@ export default function RoomPage() {
                     ))}
                   </div>
                   {reactions.length > 0 && (
-                    <div className="mt-4 flex justify-center gap-1 flex-wrap">
-                      {reactions.slice(-10).map((r, idx) => (
-                        <motion.span
-                          key={idx}
-                          initial={{ scale: 0, y: 20, opacity: 0 }}
-                          animate={{ scale: 1, y: 0, opacity: 1 }}
-                          className="text-2xl"
-                        >
-                          {r.emoji}
-                        </motion.span>
-                      ))}
+                    <div className="mt-4 flex justify-center gap-2 flex-wrap">
+                      {reactions.slice(-10).map((r, idx) => {
+                        const reactor = room.players.find(p => p.id === r.playerId);
+                        return (
+                          <motion.div
+                            key={idx}
+                            initial={{ scale: 0, y: 20, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            className="flex items-center gap-1 bg-white/10 rounded-full pr-2 pl-1 py-1"
+                          >
+                            <span className="text-lg">{reactor?.avatar}</span>
+                            <span className="text-sm font-medium text-purple-200">{reactor?.name}</span>
+                            <span className="text-xl">{r.emoji}</span>
+                          </motion.div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
