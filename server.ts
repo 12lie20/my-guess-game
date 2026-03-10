@@ -74,9 +74,13 @@ type Player = {
   winStreak: number;
   usedDouble: boolean;
   usedHint: boolean;
+  votedFor?: string;
 };
 
-type RoomState = 'LOBBY' | 'QUESTION' | 'PREDICTION' | 'REVEAL' | 'SCORE';
+type GameMode = 'mind_reader' | 'spy';
+
+type RoomState = 'LOBBY' | 'QUESTION' | 'PREDICTION' | 'REVEAL' | 'SCORE' | 'VOTING' | 'SPY_REVEAL';
+type SpyState = 'LOBBY' | 'QUESTION' | 'VOTING' | 'SPY_REVEAL' | 'SCORE';
 
 type Reaction = {
   playerId: string;
@@ -86,14 +90,18 @@ type Reaction = {
 
 type Room = {
   id: string;
+  gameMode: GameMode;
   players: Player[];
-  state: RoomState;
+  state: RoomState | SpyState;
   subjectId?: string;
   currentQuestion?: string;
+  spyQuestion?: string;
   subjectAnswer?: string;
   round: number;
   subjectIndex: number;
   reactions: Reaction[];
+  votes?: Record<string, string>;
+  spyId?: string;
 };
 
 const rooms = new Map<string, Room>();
@@ -201,6 +209,29 @@ const QUESTIONS = [
   "وش أكثر شيء يخليك تحس بالروعة؟",
 ];
 
+const SPY_QUESTIONS = [
+  "وش أكثر شيء يخافون منه؟",
+  "وش أكلة يحبونها؟",
+  "وش لونهم المفضل؟",
+  "وش فلمهم المفضل؟",
+  "وش رياضتهم المفضلة؟",
+  "وش بلد يحبون يسافروا لها؟",
+  "وش animal يحبون؟",
+  "وش شيء يكرهونه؟",
+  "وش هوايتهم؟",
+  "وش أغنيتهم المفضلة؟",
+  "وش مشروبهم المفضل؟",
+  "وش شيء يتمنونه؟",
+  "وش لون شعرهم؟",
+  "وش تاريخ ميلادهم؟",
+  "وش مدينة سكنوا فيها؟",
+  "وش University درسوا فيها؟",
+  "وش اسم حيوانهم الأليف؟",
+  "وش شيئ يشتغلون فيه؟",
+  "وش restaurant يحبون؟",
+  "وش sport يلعبون؟",
+];
+
 app.prepare().then(() => {
   const server = createServer((req, res) => {
     const parsedUrl = parse(req.url!, true);
@@ -216,7 +247,7 @@ app.prepare().then(() => {
   io.on('connection', (socket) => {
     console.log('Client connected:', socket.id);
 
-    socket.on('create_room', ({ name, avatar }, callback) => {
+    socket.on('create_room', ({ name, avatar, gameMode = 'mind_reader' }, callback) => {
       try {
         if (!checkRateLimit(socket.id)) return callback({ success: false, error: 'Rate limit exceeded' });
         
@@ -237,6 +268,7 @@ app.prepare().then(() => {
 
         rooms.set(roomId, {
           id: roomId,
+          gameMode: gameMode as GameMode,
           players: [newPlayer],
           state: 'LOBBY',
           round: 1,
@@ -296,8 +328,13 @@ app.prepare().then(() => {
 
       if (room.players.length < 2) return;
 
-      room.subjectIndex = -1; // Reset for start
-      startNewRound(roomId);
+      room.subjectIndex = -1;
+      
+      if (room.gameMode === 'spy') {
+        startSpyRound(roomId);
+      } else {
+        startNewRound(roomId);
+      }
     });
 
     socket.on('submit_answer', ({ roomId, answer }) => {
@@ -311,26 +348,100 @@ app.prepare().then(() => {
 
       const sanitizedAnswer = xss(answer).substring(0, 100);
 
-      if (room.state === 'QUESTION' && socket.id === room.subjectId) {
-        room.subjectAnswer = sanitizedAnswer;
-        room.state = 'PREDICTION';
-        io.to(roomId).emit('room_update', room);
-      } else if (room.state === 'PREDICTION' && socket.id !== room.subjectId) {
-        if (player.prediction) return; // Already submitted
-        
-        player.prediction = sanitizedAnswer;
-        io.to(roomId).emit('player_typing', { playerId: socket.id, status: 'Submitted' });
-        
-        // Check if all non-subject players have submitted
-        const allSubmitted = room.players
-          .filter(p => p.id !== room.subjectId)
-          .every(p => p.prediction);
+      if (room.gameMode === 'spy') {
+        if (room.state === 'QUESTION') {
+          player.prediction = sanitizedAnswer;
           
-        if (allSubmitted) {
-          room.state = 'REVEAL';
+          const allSubmitted = room.players.every(p => p.prediction);
+          if (allSubmitted) {
+            room.state = 'VOTING';
+            io.to(roomId).emit('room_update', room);
+          }
+        }
+      } else {
+        if (room.state === 'QUESTION' && socket.id === room.subjectId) {
+          room.subjectAnswer = sanitizedAnswer;
+          room.state = 'PREDICTION';
           io.to(roomId).emit('room_update', room);
+        } else if (room.state === 'PREDICTION' && socket.id !== room.subjectId) {
+          if (player.prediction) return;
+          
+          player.prediction = sanitizedAnswer;
+          io.to(roomId).emit('player_typing', { playerId: socket.id, status: 'Submitted' });
+          
+          const allSubmitted = room.players
+            .filter(p => p.id !== room.subjectId)
+            .every(p => p.prediction);
+            
+          if (allSubmitted) {
+            room.state = 'REVEAL';
+            io.to(roomId).emit('room_update', room);
+          }
         }
       }
+    });
+
+    socket.on('submit_vote', ({ roomId, targetId }) => {
+      if (!checkRateLimit(socket.id)) return;
+      
+      const room = rooms.get(roomId);
+      if (!room || room.state !== 'VOTING') return;
+
+      const player = room.players.find(p => p.id === socket.id);
+      if (!player || player.votedFor) return;
+
+      player.votedFor = targetId;
+      if (!room.votes) room.votes = {};
+      room.votes[socket.id] = targetId;
+
+      const allVoted = room.players.every(p => p.votedFor);
+      if (allVoted) {
+        calculateSpyResults(roomId);
+      } else {
+        io.to(roomId).emit('room_update', room);
+      }
+    });
+
+    function calculateSpyResults(roomId: string) {
+      const room = rooms.get(roomId);
+      if (!room) return;
+
+      room.state = 'SCORE';
+      
+      const voteCount: Record<string, number> = {};
+      room.players.forEach(p => {
+        if (p.votedFor) {
+          voteCount[p.votedFor] = (voteCount[p.votedFor] || 0) + 1;
+        }
+      });
+
+      const spyCaught = room.spyId && voteCount[room.spyId] && voteCount[room.spyId] > 0;
+      
+      room.players.forEach(p => {
+        if (room.spyId && p.id === room.spyId) {
+          if (spyCaught) {
+            p.score += 50;
+          } else {
+            p.score += 100;
+          }
+        } else if (room.spyId && p.votedFor === room.spyId) {
+          p.score += 100;
+        }
+      });
+
+      io.to(roomId).emit('room_update', room);
+    }
+
+    socket.on('next_spy_round', (roomId) => {
+      if (!checkRateLimit(socket.id)) return;
+      const room = rooms.get(roomId);
+      if (!room || room.state !== 'SCORE') return;
+      
+      const player = room.players.find(p => p.id === socket.id);
+      if (!player?.isHost) return;
+
+      room.round++;
+      startSpyRound(roomId);
     });
 
     socket.on('typing', ({ roomId }) => {
@@ -485,6 +596,31 @@ app.prepare().then(() => {
       // Select random question
       const questionIndex = Math.floor(Math.random() * QUESTIONS.length);
       room.currentQuestion = QUESTIONS[questionIndex];
+
+      room.state = 'QUESTION';
+      io.to(roomId).emit('room_update', room);
+    }
+
+    function startSpyRound(roomId: string) {
+      const room = rooms.get(roomId);
+      if (!room) return;
+
+      room.players.forEach(p => {
+        p.prediction = undefined;
+        p.votedFor = undefined;
+      });
+      room.reactions = [];
+      room.votes = {};
+
+      room.subjectIndex = (room.subjectIndex + 1) % room.players.length;
+      room.subjectId = room.players[room.subjectIndex].id;
+      room.spyId = room.subjectId;
+
+      const questionIndex = Math.floor(Math.random() * SPY_QUESTIONS.length);
+      room.currentQuestion = SPY_QUESTIONS[questionIndex];
+      
+      const spyQuestionIndex = Math.floor(Math.random() * SPY_QUESTIONS.length);
+      room.spyQuestion = SPY_QUESTIONS[spyQuestionIndex];
 
       room.state = 'QUESTION';
       io.to(roomId).emit('room_update', room);

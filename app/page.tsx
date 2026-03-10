@@ -4,10 +4,29 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import { motion } from 'motion/react';
-import { User, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
+import { User, Sparkles, ArrowRight, Loader2, Ghost, Brain } from 'lucide-react';
 
 const AVATARS = [
   '👽', '👻', '🤖', '👾', '🎃', '😺', '🐶', '🦊', '🐼', '🐯'
+];
+
+type GameMode = 'mind_reader' | 'spy';
+
+const GAME_MODES = [
+  { 
+    id: 'mind_reader' as GameMode, 
+    name: 'وش يفكر صديقك؟', 
+    desc: 'تتوقع إجابات أصدقائك',
+    icon: Brain,
+    color: 'from-fuchsia-500 to-purple-500'
+  },
+  { 
+    id: 'spy' as GameMode, 
+    name: 'الجاسوس', 
+    desc: 'اكشف الجاسوس بينكم',
+    icon: Ghost,
+    color: 'from-cyan-500 to-blue-500'
+  },
 ];
 
 function HomeContent() {
@@ -17,6 +36,7 @@ function HomeContent() {
   const [isConnecting, setIsConnecting] = useState(true);
   const [connectionError, setConnectionError] = useState('');
   const [isJoining, setIsJoining] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<GameMode>('mind_reader');
   const router = useRouter();
   const searchParams = useSearchParams();
   const { socket, setRoom, setPlayer } = useGameStore();
@@ -61,11 +81,11 @@ function HomeContent() {
     const { socket } = useGameStore.getState();
     if (!socket) return;
 
-    socket.emit('create_room', { name, avatar }, (response: any) => {
+    socket.emit('create_room', { name, avatar, gameMode: selectedMode }, (response: any) => {
       if (response.success) {
         setRoom(response.room);
         setPlayer(response.player);
-        router.push(`/room/${response.roomId}`);
+        router.push(`/${selectedMode}/room/${response.roomId}`);
       } else {
         alert(response.error || 'Failed to create room');
       }
@@ -81,7 +101,8 @@ function HomeContent() {
       if (response.success) {
         setRoom(response.room);
         setPlayer(response.player);
-        router.push(`/room/${roomCode}`);
+        const gameMode = response.room?.gameMode || 'mind_reader';
+        router.push(`/${gameMode}/room/${roomCode}`);
       } else {
         alert(response.error);
       }
@@ -111,6 +132,32 @@ function HomeContent() {
         <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl" />
 
         <div className="space-y-6 relative z-10">
+          {/* Game Mode Selection */}
+          <div>
+            <label className="block text-sm font-medium text-purple-200 mb-3 text-center">اختر اللعبة</label>
+            <div className="grid grid-cols-2 gap-3">
+              {GAME_MODES.map((mode) => {
+                const Icon = mode.icon;
+                return (
+                  <button
+                    key={mode.id}
+                    onClick={() => setSelectedMode(mode.id)}
+                    className={`p-4 rounded-xl transition-all duration-300 flex flex-col items-center gap-2 ${
+                      selectedMode === mode.id 
+                        ? `bg-gradient-to-br ${mode.color} scale-105 shadow-lg border-2 border-white/30` 
+                        : 'bg-white/5 hover:bg-white/10 border border-white/10'
+                    }`}
+                  >
+                    <Icon className={`w-8 h-8 ${selectedMode === mode.id ? 'text-white' : 'text-purple-300'}`} />
+                    <span className={`font-bold text-sm ${selectedMode === mode.id ? 'text-white' : 'text-purple-200'}`}>
+                      {mode.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-purple-200 mb-2">اسمك</label>
             <div className="relative group">

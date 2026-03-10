@@ -11,9 +11,11 @@ export type Player = {
   winStreak: number;
   usedDouble: boolean;
   usedHint: boolean;
+  votedFor?: string;
 };
 
-export type RoomState = 'LOBBY' | 'QUESTION' | 'PREDICTION' | 'REVEAL' | 'SCORE';
+export type GameMode = 'mind_reader' | 'spy';
+export type RoomState = 'LOBBY' | 'QUESTION' | 'PREDICTION' | 'REVEAL' | 'SCORE' | 'VOTING' | 'SPY_REVEAL';
 
 export type Reaction = {
   playerId: string;
@@ -23,14 +25,18 @@ export type Reaction = {
 
 export type Room = {
   id: string;
+  gameMode: GameMode;
   players: Player[];
   state: RoomState;
   subjectId?: string;
   currentQuestion?: string;
+  spyQuestion?: string;
   subjectAnswer?: string;
   round: number;
   subjectIndex: number;
   reactions: Reaction[];
+  votes?: Record<string, string>;
+  spyId?: string;
 };
 
 type GameStore = {
